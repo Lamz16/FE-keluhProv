@@ -60,6 +60,7 @@ const ListComplaint = () => {
         },
       });
 
+      //add
       console.log("Complaints Response:", complaintsResponse.data); // Log response complaints
       console.log("Categories Response:", categoriesResponse.data); // Log response categories
 
