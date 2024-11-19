@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { PlusIcon } from '@heroicons/react/24/outline';
+import {useEffect, useState} from 'react';
+import {PlusIcon} from '@heroicons/react/24/outline';
 import Swal from 'sweetalert2';
 import HeaderLayout from '../Header/HeaderLayout';
 import SidebarLayout from '../Header/SidebarLayout';
@@ -10,8 +10,8 @@ function CategoryLayout() {
   const [isEditing, setIsEditing] = useState(false);
   const [currentCategory, setCurrentCategory] = useState(null);
   const [newCategory, setNewCategory] = useState({
-    Name: '',
-    Description: '',
+    name: '',
+    description: '',
   });
   const [searchKeyword, setSearchKeyword] = useState(''); // State untuk menyimpan kata kunci pencarian
 
@@ -21,38 +21,30 @@ function CategoryLayout() {
 
   const fetchCategory = async () => {
     try {
-      const token = sessionStorage.getItem('token');
-      const response = await fetch('https://capstone-dev.mdrizki.my.id/api/v1/categories', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
+      const response = await fetch('http://localhost:3000/categories');
       const data = await response.json();
-      setCategory(data.data);
+      if (Array.isArray(data)) {
+        setCategory(data); // Pastikan data berbentuk array
+      } else {
+        console.error('Unexpected data format:', data);
+      }
     } catch (error) {
-      console.error('Error fetching category: ', error);
+      console.error('Error fetching categories:', error);
     }
   };
 
+
+
   const deleteCategory = async (categoryID) => {
     try {
-      const token = sessionStorage.getItem('token');
-      const confirmed = await confirmDelete();
+      const confirmed = await confirmDelete();  // Konfirmasi penghapusan dengan SweetAlert2
 
       if (!confirmed) return;
 
-      const response = await fetch(`https://capstone-dev.mdrizki.my.id/api/v1/categories/${categoryID}`, {
+      const response = await fetch(`http://localhost:3000/categories/${categoryID}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -60,9 +52,11 @@ function CategoryLayout() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      setCategory((prevCategory) => prevCategory.filter((category) => category.ID !== categoryID));
+      // Update state untuk menghapus kategori dari tampilan setelah berhasil dihapus
+      setCategory((prevCategory) => prevCategory.filter((category) => category.id !== categoryID));
+
       Swal.fire({
-        position: 'top-end',
+        position: 'center',
         icon: 'success',
         title: 'Kategori berhasil dihapus',
         showConfirmButton: false,
@@ -70,8 +64,16 @@ function CategoryLayout() {
       });
     } catch (error) {
       console.error('Error deleting category: ', error);
+      Swal.fire({
+        position: 'center',
+        icon: 'error',
+        title: 'Gagal menghapus kategori',
+        showConfirmButton: false,
+        timer: 1500,
+      });
     }
   };
+
 
   const confirmDelete = async () => {
     const result = await Swal.fire({
@@ -114,24 +116,22 @@ function CategoryLayout() {
     e.preventDefault();
 
     try {
-      const token = sessionStorage.getItem('token');
-      const response = await fetch('https://capstone-dev.mdrizki.my.id/api/v1/categories', {
+      const response = await fetch('http://localhost:3000/categories', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(newCategory),
+        body: JSON.stringify({
+          name: newCategory.name,
+          description: newCategory.description,
+        }),
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      setNewCategory({
-        Name: '',
-        Description: '',
-      });
+      setNewCategory({ name: '', description: '' });
       setIsAdding(false);
       fetchCategory();
       Swal.fire({
@@ -145,6 +145,7 @@ function CategoryLayout() {
       console.error('Error creating new category:', error);
     }
   };
+
 
   const handleEditCategory = (category) => {
     setCurrentCategory(category);
@@ -160,15 +161,16 @@ function CategoryLayout() {
     e.preventDefault();
 
     try {
-      const token = sessionStorage.getItem('token');
-      const response = await fetch(`https://capstone-dev.mdrizki.my.id/api/v1/categories/${currentCategory.ID}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(currentCategory),
-      });
+      const response = await fetch(
+          `http://localhost:3000/categories/${currentCategory.id}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(currentCategory)
+          }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -178,7 +180,7 @@ function CategoryLayout() {
       setCurrentCategory(null);
       fetchCategory();
       Swal.fire({
-        position: 'top-end',
+        position: 'center',
         icon: 'success',
         title: 'Kategori berhasil diperbarui',
         showConfirmButton: false,
@@ -193,7 +195,7 @@ function CategoryLayout() {
     setSearchKeyword(e.target.value);
   };
 
-  const filteredCategories = category.filter((cat) => cat.Name.toLowerCase().includes(searchKeyword.toLowerCase()) || cat.Description.toLowerCase().includes(searchKeyword.toLowerCase()));
+  const filteredCategories = category.filter((cat) => cat.name.toLowerCase().includes(searchKeyword.toLowerCase()) || cat.description.toLowerCase().includes(searchKeyword.toLowerCase()));
 
   return (
     <section className="flex w-full flex-col">
@@ -262,8 +264,8 @@ function CategoryLayout() {
                   className="bg-white shadow-lg col-auto md:col-span-1 lg:col-span-2 rounded-lg pl-5 pr-5 pt-3 pb-3"
                   key={index}
                 >
-                  <p className="text-main-color">{category.Name}</p>
-                  <p>{category.Description}</p>
+                  <p className="text-main-color">{category.name}</p>
+                  <p>{category.description}</p>
                   <div className="flex">
                     <button onClick={() => handleEditCategory(category)}>
                       <svg
@@ -302,7 +304,7 @@ function CategoryLayout() {
                         />
                       </svg>
                     </button>
-                    <button onClick={() => deleteCategory(category.ID)}>
+                    <button onClick={() => deleteCategory(category.id)}>
                       <svg
                         width={24}
                         height={24}
@@ -339,7 +341,7 @@ function CategoryLayout() {
                     type="text"
                     id="Name"
                     name="Name"
-                    value={newCategory.Name}
+                    value={newCategory.name}
                     onChange={handleNewCategoryInputChange}
                     className="w-full p-2 border border-gray-300 rounded"
                     required
@@ -353,7 +355,7 @@ function CategoryLayout() {
                     type="text"
                     id="Description"
                     name="Description"
-                    value={newCategory.Description}
+                    value={newCategory.description}
                     onChange={handleNewCategoryInputChange}
                     className="w-full p-2 border border-gray-300 rounded"
                     required
@@ -386,28 +388,28 @@ function CategoryLayout() {
               >
                 <h2 className="text-2xl mb-4 font-bold">Edit Kategori</h2>
                 <div className="mb-4">
-                  <label className="block mb-2 font-bold" htmlFor="Name">
+                  <label className="block mb-2 font-bold" htmlFor="name">
                     Nama
                   </label>
                   <input
                     type="text"
-                    id="Name"
-                    name="Name"
-                    value={currentCategory.Name}
+                    id="name"
+                    name="name"
+                    value={currentCategory?.name || ''}
                     onChange={handleEditCategoryInputChange}
                     className="w-full p-2 border border-gray-300 rounded"
                     required
                   />
                 </div>
                 <div className="mb-4">
-                  <label className="block mb-2 font-bold" htmlFor="Description">
+                  <label className="block mb-2 font-bold" htmlFor="description">
                     Deskripsi
                   </label>
                   <input
                     type="text"
-                    id="Description"
-                    name="Description"
-                    value={currentCategory.Description}
+                    id="description"
+                    name="description"
+                    value={currentCategory?.description || ''}
                     onChange={handleEditCategoryInputChange}
                     className="w-full p-2 border border-gray-300 rounded"
                     required
